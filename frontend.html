@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Образовательная платформа</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2em; }
+    input, button, select { margin: 0.2em; }
+    .block { margin-bottom: 2em; }
+    pre { background: #f4f4f4; padding: 1em; }
+  </style>
+</head>
+<body>
+  <h1>Образовательная платформа (Demo Frontend)</h1>
+
+  <div class="block">
+    <h2>Регистрация</h2>
+    <input id="reg-name" placeholder="Имя пользователя">
+    <select id="reg-role">
+      <option value="student">student</option>
+      <option value="teacher">teacher</option>
+      <option value="admin">admin</option>
+    </select>
+    <input id="reg-password" type="password" placeholder="Пароль">
+    <button onclick="register()">Зарегистрироваться</button>
+    <span id="reg-info"></span>
+  </div>
+
+  <div class="block">
+    <h2>Авторизация</h2>
+    <input id="login" placeholder="Имя пользователя">
+    <input id="password" type="password" placeholder="Пароль">
+    <button onclick="login()">Войти</button>
+    <span id="token-info"></span>
+  </div>
+
+  <div class="block">
+    <h2>Поиск</h2>
+    <input id="search-query" placeholder="Ключевое слово">
+    <button onclick="search()">Искать</button>
+    <pre id="search-result"></pre>
+  </div>
+
+  <div class="block">
+    <h2>Курсы</h2>
+    <button onclick="getCourses()">Показать курсы</button>
+    <pre id="courses"></pre>
+  </div>
+
+  <div class="block">
+    <h2>Материалы</h2>
+    <button onclick="getMaterials()">Показать материалы</button>
+    <pre id="materials"></pre>
+  </div>
+
+  <div class="block">
+    <h2>Логирование активности</h2>
+    <input id="activity-user" placeholder="user_id">
+    <input id="activity-material" placeholder="material_id">
+    <input id="activity-action" placeholder="action (view/complete/...)">
+    <button onclick="logActivity()">Логировать</button>
+    <pre id="activity-result"></pre>
+  </div>
+
+  <script>
+    const API_URL = "http://127.0.0.1:8000";
+    let token = '';
+
+    function setToken(t) {
+      token = t;
+      document.getElementById('token-info').textContent = t ? 'Токен получен' : '';
+      console.log('TOKEN:', token);
+    }
+
+    async function register() {
+      const name = document.getElementById('reg-name').value;
+      const role = document.getElementById('reg-role').value;
+      const password = document.getElementById('reg-password').value;
+      const res = await fetch(API_URL + '/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, role, password })
+      });
+      if (res.ok) {
+        document.getElementById('reg-info').textContent = 'Регистрация успешна!';
+        // Автоматический вход после регистрации
+        document.getElementById('login').value = name;
+        document.getElementById('password').value = password;
+        await login();
+      } else {
+        const err = await res.json();
+        document.getElementById('reg-info').textContent = 'Ошибка: ' + (err.detail || '');
+      }
+    }
+
+    async function login() {
+      const username = document.getElementById('login').value;
+      const password = document.getElementById('password').value;
+      const form = new FormData();
+      form.append('username', username);
+      form.append('password', password);
+      const res = await fetch(API_URL + '/token', { method: 'POST', body: form });
+      if (res.ok) {
+        const data = await res.json();
+        setToken(data.access_token);
+      } else {
+        alert('Ошибка авторизации');
+      }
+    }
+
+    async function getCourses() {
+      const res = await fetch(API_URL + '/courses', { headers: { Authorization: 'Bearer ' + token } });
+      document.getElementById('courses').textContent = res.ok ? JSON.stringify(await res.json(), null, 2) : 'Ошибка';
+    }
+
+    async function getMaterials() {
+      const res = await fetch(API_URL + '/materials', { headers: { Authorization: 'Bearer ' + token } });
+      document.getElementById('materials').textContent = res.ok ? JSON.stringify(await res.json(), null, 2) : 'Ошибка';
+    }
+
+    async function search() {
+      const q = document.getElementById('search-query').value;
+      const res = await fetch(API_URL + '/search?query=' + encodeURIComponent(q), { headers: { Authorization: 'Bearer ' + token } });
+      document.getElementById('search-result').textContent = res.ok ? JSON.stringify(await res.json(), null, 2) : 'Ошибка';
+    }
+
+    async function logActivity() {
+      const user_id = document.getElementById('activity-user').value;
+      const material_id = document.getElementById('activity-material').value;
+      const action = document.getElementById('activity-action').value;
+      const body = JSON.stringify({
+        user_id: Number(user_id),
+        material_id: Number(material_id),
+        action: action,
+        timestamp: new Date().toISOString()
+      });
+      const res = await fetch(API_URL + '/activity/log_event', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer ' + token
+        },
+        body
+      });
+      document.getElementById('activity-result').textContent = res.ok ? JSON.stringify(await res.json(), null, 2) : 'Ошибка';
+    }
+  </script>
+</body>
+</html> 
