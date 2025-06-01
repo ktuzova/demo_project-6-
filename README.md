@@ -130,3 +130,11 @@ POST /activity/log_event
 ### Frontend
 - **frontend.html** — простой HTML+JS интерфейс для тестирования платформы (авторизация, поиск, просмотр курсов/материалов, логирование активности)
 - **Swagger UI** — автоматическая документация и тестирование API по адресу `/docs` 
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # или укажите адрес вашего фронтенда
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+) 
